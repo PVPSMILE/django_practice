@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/login.css' %}">
+    <script src="{% static 'js/validation.js' %}" defer></script>
+    
+{% endblock %}
+{% block body %}
+    <form method="post">
+        {% csrf_token %}
+        <header id="form-header">
+            <h1>Login!</h1>
+        </header>
+        <div class="form-filds">
+            <div class="form-field">
+                <label>Username</label>
+                <input type="text" placeholder="username" name="username">
+            </div>
+            <div class="form-field">
+                <label>Password</label>
+                <input type="text" placeholder="password" name="password">
+            </div>
+        </div>
+        <button type="submit">login</button>
+    </form>
+
+
+{% endblock %}

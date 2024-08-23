@@ -1,0 +1,83 @@
+@import url('styles.css');
+/* Стиль для контейнера курса и уроков */
+.course-container {
+    display: flex;
+}
+
+.course-list {
+    width: 25%;
+    padding-right: 20px;
+    border-right: 1px solid #ccc;
+}
+
+.course-item {
+    cursor: pointer;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+    color: rgb(4, 4, 4);
+}
+
+.lesson-container {
+    width: 75%;
+    padding: 0 20px;
+}
+
+#lesson-list {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.lesson-list-header, .lesson-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.lesson-list-header span, .lesson-item span {
+    flex-basis: 33%;
+    text-align: left;
+}
+
+.lesson-list-header {
+    font-weight: bold;
+    background-color: #f0f0f0;
+    padding: 10px;
+}
+
+.lesson-item {
+    cursor: pointer;
+}
+
+.lesson-editor,
+.lesson-creator {
+    margin-top: 20px;
+}
+
+#lesson-editor {
+    display: none;
+}
+
+#lesson-creator {
+    margin-top: 20px;
+}
+.container {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+}
+
+.left-column {
+    width: 70%;
+    padding-right: 20px;
+}
+
+.right-column {
+    width: 30%;
+    text-align: right;
+}
+
+.lesson-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #ccc;
+}

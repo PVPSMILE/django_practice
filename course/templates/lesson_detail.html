@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/lessons.css' %}">
+<link rel="stylesheet" href="{% static 'css/course.css' %}">
+
+{% endblock %}
+
+{% block body %}
+<div id="assignment-container">
+    <div class="task-navigate">
+        <button id="prev-btn">Left</button>
+        <h1></h1>
+        <button id="next-btn">Right</button>
+
+    </div>
+    <p><span id="ukrainian-sentence"></span></p>
+    <p><span id="english-sentence"></span></p>
+    <div class="answer-area">
+        <span class="answer" ></span>
+        <button id="backspace-button">
+            <ion-icon class="icon" id="backspace" name="backspace"></ion-icon> 
+        </button>
+
+    </div>
+    <div id="buttons-container">
+
+    </div>
+    
+    <button id="save-progress">Save progress</button>
+    <div id="assignment-indicators" class="indicators-container"></div>
+    <p id="result-message"></p>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+
+    let currentIndex = 0;
+    let assignments = [];
+    let allWords = [];
+    let buttonsCount = 9;
+    let test = []
+
+    // Loads assignments from the server and updates the interface
+    function loadAssignments() {
+        $.ajax({
+            url: '{% url "get_assignments" lesson_id %}',  // using Django URL template
+            method: 'GET',  // HTTP method for the request
+            success: function(data) {
+                assignments = data.assignments;  // Stores assignments from the response
+                tasks = data.tasks;  // Stores tasks from the response
+                setDefaultCookies(assignments.length);  // Sets default cookies
+                updateSentences();  // Updates the sentences
+                updateIndicators();  // Updates the indicators
+            },
+            error: function() {
+                alert('Failed to load assignments.');  // Shows an error message 
+            }
+        });
+    }
+
+    // Returns random words 
+    function getRandomWords(count, excludeWords) {
+        const randomWords = [
+            "apple", "banana", "grape", "orange", "pear",
+            "peach", "plum", "kiwi", "melon", "berry",
+            "cherry", "mango", "pineapple", "apricot", "lime"
+        ];
+
+        // Filters words to exclude specified ones
+        const filteredWords = randomWords.filter(word => !excludeWords.includes(word));
+        let chosenWords = [];
+
+        // Selects random words until the required count is reached
+        while (chosenWords.length < count) {
+            const word = filteredWords[Math.floor(Math.random() * filteredWords.length)];
+            if (!chosenWords.includes(word)) {
+                chosenWords.push(word);
+            }
+        }
+        return chosenWords;  // Returns the selected words
+    }
+
+    // Updates the indicators in the interface
+    function updateIndicators() {
+        const indicatorsContainer = $('#assignment-indicators');  // Finds the container for indicators
+        indicatorsContainer.empty();  // Clears the container
+        const indicatorsCookies = getCookieValue('indicators').split(',');  // Gets indicator values from cookies
+        for (let i = 0; i < assignments.length; i++) {
+            const indicator = $('<div>')
+                .addClass('indicator')
+                .attr('data-id', i); 
+                
+                if (indicatorsCookies[i] == 0) {
+                    // Sets the indicator as wrong
+                    indicator.addClass('wrong');
+                } else if (indicatorsCookies[i] == 1) {
+                    // Sets the indicator as correct
+                    indicator.addClass('correct');
+                } else {
+                    // Sets the indicator as inactive
+                    indicator.addClass('inactive');
+                }
+        
+                indicatorsContainer.append(indicator);  // Adds the indicator to the container
+            }
+    }
+
+    // Loads the current sentence
+    function updateSentences() {
+        const assignment = assignments[currentIndex];  // Gets the current assignment
+        const words = assignment.English.split(' ');  // Splits the English sentence into words
+        targetWordCount = words.length;  // Sets the target word count
+
+        $('.answer').text('');  // Clears the answer text
+
+        $('.answer').text(getCurrentCookie());  // Sets the answer text from the current cookie
+
+        const randomWords = getRandomWords(buttonsCount - words.length, words);  // Gets random words
+        allWords = [...words, ...randomWords].sort(() => Math.random() - 0.5);  // Combines and shuffles words
+
+        const task = tasks[currentIndex];
+        $('#english-sentence').text(assignment.English);  // Displays the English sentence
+        $('#ukrainian-sentence').text(assignment.Ukrainian);  // Displays the Ukrainian sentence
+        $('#assignment-container h1').text(`Assignment ${currentIndex + 1} of ${assignments.length}`);  // Displays assignment info
+
+        createButtonsForWords(allWords);  // Creates buttons for words
+    }
+
+    // Sets default cookies before loading tasks
+    function setDefaultCookies(count) {
+        const elementsToSet = Array(count).fill("");  // Initializes an array for sentences
+        const sortedData = tasks.sort((a, b) => a.assignment_id - b.assignment_id);  // Sorts tasks by assignment ID
+
+        sortedData.forEach(item => {
+            if (item.assignment_id >= 0 && item.assignment_id < 19) {
+                elementsToSet[item.assignment_id] = item.sentence;  // Sets sentences for each assignment ID
+            }
+        });
+        
+        const combinedValue = elementsToSet.join(',');  // Combines sentences into a string
+        const includes = Array(count).fill("2");  // Initializes an array for indicators
+
+        sortedData.forEach(item => { 
+            if (item.assignment_id >= 0 && item.assignment_id < 19) {
+                includes[item.assignment_id] = item.is_correct;  // Sets indicators for each assignment ID
+            }
+        });
+
+        const includesValue = includes.join(',');  // Combines indicators into a string
+
+        document.cookie = `indicators=${includesValue}; path=/`;  // Sets indicators cookie
+        document.cookie = `tasks_sentence=${combinedValue}; path=/`;  // Sets sentences cookie
+    }
+
+    // Handles clicks on indicators
+    $(document).on('click', '.indicator', function() {
+        const dataId = $(this).data('id');  // Gets the ID of the clicked indicator
+        saveTasksSentenceCookie($('.answer').text());  // Saves the current answer to cookies
+        currentIndex = dataId  // Updates the current index
+
+        updateSentences();  // Updates the sentences
+    })
+
+    // Saves task indicators to cookies
+    function saveIndicatorCookie(indicatorAnswer) {
+        const indicatorsCookies = getCookieValue('indicators').split(',');  // Gets indicator values from cookies
+
+        indicatorsCookies[currentIndex] = indicatorAnswer;  // Updates the indicator for the current index
+
+        const updatedIndicatorValue = indicatorsCookies.join(",");  // Combines updated indicators into a string
+
+        document.cookie = `indicators=${updatedIndicatorValue}; path=/`;  // Sets the updated indicators cookie
+    }
+
+    // Saves task sentences to cookies
+    function saveTasksSentenceCookie(answer) {
+        let checkEquals = "=";
+        let count = document.cookie.split(checkEquals).length - 1;  // Counts the number of cookies
+
+        const currentTasks = getCookieValue('tasks_sentence').split(',');  // Gets task sentences from cookies
+
+        currentTasks[currentIndex] = answer;  // Updates the task sentence for the current index
+        const updatedValue = currentTasks.join(",");  // Combines updated sentences into a string
+
+        document.cookie = `tasks_sentence=${updatedValue}; path=/`;  // Sets the updated sentences cookie
+    }
+
+    // Gets the current cookie value for tasks
+    function getCurrentCookie() {
+        let checkEquals = "=";
+        let count = document.cookie.split(checkEquals).length - 1;  // Counts the number of cookies
+
+        const currentTasks = getCookieValue('tasks_sentence').split(',');  // Gets task sentences from cookies
+        return currentTasks[currentIndex];  // Returns the current sentence
+    }
+
+    // Creates buttons for each word and adds them to the buttons container
+    function createButtonsForWords(words) {
+        $('#buttons-container').empty(); 
+
+        words.forEach(word => {
+            const button = $('<button>')
+                .text(word)
+                .addClass('word-button')
+                .click(function() {
+
+                    const currentAnswer = $('.answer').text().trim();  // Gets the current answer
+                    const answerWords = currentAnswer.split(' ');  
+
+                    const targetWordCount = assignments[currentIndex].English.split(' ').length;  // Gets the target word count
+
+                    if (answerWords.length < targetWordCount) {  // Checks if the answer length is less than the target count
+                        $('.answer').text(currentAnswer + ' ' + word);  // Adds the selected word to the answer
+                        answerWords.push(word);
+
+                        if (answerWords.length === targetWordCount) {  // Checks if the answer length matches the target count
+                            checkAnswer();  // Checks the answer
+                        }
+                    } else {
+                        console.log('You have reached the maximum number of words.');  // Logs a message if the maximum number of words is reached
+                    }
+                    createButtonsForWords(words.sort(() => Math.random() - 0.5))  // Recreates buttons with shuffled words
+                });
+            $('#buttons-container').append(button);  // Adds the button to the container
+        });
+    }
+
+    // Handles backspace button click
+    $('#backspace').click(function() {
+        const currentAnswer = $('.answer').text();  // Gets the current answer
+        const answerWords = currentAnswer.split(' ');  // Splits the answer into words
+
+        if (answerWords.length > 0) {
+            answerWords.pop();  // Removes the last word from the answer
+            $('.answer').text(answerWords.join(' '));  // Updates the answer text
+        }
+    });
+
+    // Handles save progress button click
+    $('#save-progress').click(function() {
+        saveTasksSentenceCookie($('.answer').text());  // Saves the current answer to cookies
+        progress = {
+            'task_progress': getCookieValue('tasks_sentence').split(','),  // Gets task progress from cookies
+            'indicators': getCookieValue('indicators').split(',')  // Gets indicators from cookies
+        }
+
+        $.ajax({
+            url: '{% url "save_progress" lesson_id %}',  // URL to save progress
+            data: {
+                'progress_tasks': getCookieValue('tasks_sentence'),   // Sends sentences from cookies
+                'progress_indicators': getCookieValue('indicators'),  // Sends indicators from cookies
+                'csrfmiddlewaretoken': '{{ csrf_token }}'  // CSRF token for security
+            },
+            method: 'POST',  // HTTP method for the request
+            success: function() {
+                alert('Successfully saved progress.');  // Shows a success message if saving is successful
+            },
+            error: function() {
+                alert('Failed to save progress.');  // Shows an error message if saving fails
+            }
+        });
+    });
+
+    // Swipes left through assignments
+    function swipeLeft() {
+        if (currentIndex > 0) {
+            saveTasksSentenceCookie($('.answer').text());  // Saves the current answer to cookies
+            currentIndex--;  // Decreases the index
+            updateSentences();  // Updates the sentences
+        }
+    }
+    $('#prev-btn').click(function () {
+        swipeLeft();  // Calls swipeLeft function on button click
+    });
+
+    // Swipes right through assignments
+    function swipeRight() {
+        if (currentIndex < assignments.length - 1) {
+            saveTasksSentenceCookie($('.answer').text());  // Saves the current answer to cookies
+            currentIndex++;  // Increases the index
+            updateSentences();  // Updates the sentences
+        }
+    }
+    $('#next-btn').click(function () {
+        swipeRight();  // Calls swipeRight function on button click
+    });
+
+    // Checks if the answer is correct and updates the UI
+    function checkAnswer() {
+        const assignment = assignments[currentIndex];  // Gets the current assignment
+        const correctAnswer = assignment.English.trim();  // Gets the correct answer
+        const userAnswer = $('.answer').text().trim();  // Gets the user's answer
+
+        const currentIndicator = $('.indicator[data-id="' + (currentIndex) + '"]');  // Gets the current indicator
+        currentIndicator.removeClass('wrong correct');  // Removes previous status classes
+
+        if (userAnswer === correctAnswer) {
+            $('.indicator[data-id="' + (currentIndex) + '"]').addClass('correct');  // Sets the indicator to correct
+            $('.answer').addClass('correct-highlight');  // Highlights the answer as correct
+            saveIndicatorCookie(1);  // Saves correct status to cookies
+        } else {
+            $('.indicator[data-id="' + (currentIndex) + '"]').addClass('wrong');  // Sets the indicator to wrong
+            $('.answer').addClass('wrong-highlight');  // Highlights the answer as wrong
+            saveIndicatorCookie(0);  // Saves wrong status to cookies
+        }
+
+        setTimeout(() => {
+            $('.answer').removeClass('wrong-highlight correct-highlight');  // Removes highlights
+            swipeRight();  // Moves to the next assignment
+        }, 1000);  // Waits 1 second before moving to the next assignment
+    }
+
+    // Runs when the document is ready
+    $(document).ready(function() {
+        console.clear();  // Clears the console
+        loadAssignments();  // Loads assignments
+    });
+
+    // Retrieves the value of a specific cookie
+    function getCookieValue(cookieName) {
+        const name = cookieName + "=";
+        const decodedCookie = decodeURIComponent(document.cookie);
+        const cookieArray = decodedCookie.split(';');
+
+        for(let i = 0; i < cookieArray.length; i++) {
+            let cookie = cookieArray[i].trim();
+
+            if (cookie.indexOf(name) === 0) {
+                return cookie.substring(name.length, cookie.length);  // Returns the cookie value
+            }
+        }
+
+        return "";  // Returns an empty string if the cookie is not found
+    }
+
+</script>
+
+{% endblock %}

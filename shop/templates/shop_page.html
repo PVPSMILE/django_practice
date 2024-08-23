@@ -1,0 +1,31 @@
+{% extends "base.html"%}
+
+{% block body %}
+
+    <div class="wrape">
+        <h2>New Product</h2>
+        <form method="post" style="top: 90px">
+            {% csrf_token %}
+            <input type="text" placeholder="product" name="product_name">
+            <input type="number" placeholder="amount" name="amount">
+            <input type="text" placeholder="description" name="description">
+            <input type="number" placeholder="price" name="price">
+            <input type="number" placeholder="discount" name="discount">
+            <button type="submit"> Добавить Товар</button>
+        </form>
+    
+        <h2>Product List</h2>
+        <ul>
+            {% for product in products %}
+                <li>
+                    <strong>{{ product.name }}</strong><br>
+                    Amount: {{ product.amount }}<br>
+                    Description: {{ product.description }}<br>
+                    Price: ${{ product.price }}<br>
+                    Discount: {{ product.discount }}%<br>
+                </li>
+            {% endfor %}
+        </ul>  
+    </div>
+    
+{% endblock %}

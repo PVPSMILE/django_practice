@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% load static %}
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/course.css' %}">
+{% endblock %}
+
+{% block body %}
+    <div class="course-container">
+        <div class="course-list">
+            <h2>Courses</h2>
+            <ul>
+                {% for course in courses %}
+                    <li class="course-item" data-id="{{ course.id }}">
+                        {{ course.course_name }}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="lesson-container" style="display: none;">
+            <div id="lessons-list-container">
+                <h2>Lessons</h2>
+                <ul id="lesson-list">
+                    <!-- Here is loading lessons -->
+                </ul>
+            </div>
+
+            <div id="lesson-editor" class="lesson-editor">
+                <h2>Edit Lesson</h2>
+                <form id="update-lesson-form">
+                    <input type="hidden" name="lesson_id" id="lesson-id">
+                    <label for="lesson-number">Lesson Number:</label>
+                    <input type="text" id="lesson-number" name="lesson_number">
+                    <label for="title">Title:</label>
+                    <input type="text" id="title" name="title">
+                    <label for="content">Content:</label>
+                    <textarea id="content" name="content"></textarea>
+                    <button type="submit">Save</button>
+                </form>
+            </div>
+
+            <div id="lesson-creator" class="lesson-creator">
+                <h2>Add New Lesson</h2>
+                <form id="add-lesson-form">
+                    <input type="hidden" name="course_id" id="new-lesson-course-id">
+                    <label for="lesson_number">Lesson Number:</label>
+                    <input type="text" id="lesson-number" name="lesson_number">
+                    <label for="title">Title:</label>
+                    <input type="text" id="new-title" name="title">
+                    <label for="content">Content:</label>
+                    <textarea id="new-content" name="content"></textarea>
+                    <button type="submit">Add Lesson</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript">
+
+        function getCookie(name) {
+            
+            // Получаем все cookie, если они существуют
+            if (document.cookie) {
+                // Разбиваем строку cookie на массив отдельных cookies
+                const cookies = document.cookie.split(';');
+
+                // Перебираем все cookies
+                for (let i = 0; i < cookies.length; i++) {
+                    console.log(cookies[i].trim())
+                    // Удаляем пробелы в начале и в конце каждого cookie
+                    const cookie = cookies[i].trim();
+
+                    // Проверяем, совпадает ли имя cookie с искомым
+                    if (cookie.startsWith(name + '=')) {
+                        // Возвращаем значение cookie (то, что после знака '=')
+                        return decodeURIComponent(cookie.substring(name.length + 1));
+                    }
+                }
+            }
+            // Возвращаем null, если cookie с таким именем не найден
+            return null;
+        }
+
+        // Получаем CSRF-токен
+        const csrftoken = getCookie('csrftoken');
+
+        
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                // Если метод запроса изменяет данные на сервере и запрос не к другому домену
+                if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(settings.type) && !this.crossDomain) {
+                    // Добавляем CSRF-токен в заголовок запроса
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
+        
+        
+
+        $(document).ready(function(){
+            $('.course-item').click(function(){
+                let courseId = $(this).data('id');
+                if(courseId){
+                    //Show the lessons
+                    $('.lesson-container').show();
+                    $('.lesson-editor').hide();
+
+                    $.ajax({
+                        url: '{% url "load_lessons" 0 %}'.replace(0, courseId),
+                        method: 'GET',
+                        success: function(data){
+                            $('#lesson-list').empty();
+                            $('#new-lesson-course-id').val(courseId);
+
+                            $('#lesson-list').append(`
+                            <li class="lesson-list-header">
+                                <span>Lesson number</span> 
+                                <span>Title</span> 
+                                <span>Content</span>
+                            </li>
+                        `);
+
+                        if(data.length > 0) {
+                            // Add the lessons
+                            data.forEach(function(lesson){
+
+                                $('#lesson-list').append(`
+                                    <li class="lesson-item" data-id="${lesson.id}">
+                                        <span>${lesson.lesson_number}</span> 
+                                        <span>${lesson.title}</span> 
+                                        <span>${lesson.content}</span>
+                                    </li>
+                                `);
+                            });
+                            } else {    
+                                $('#lesson-list').append('<li>No lessons found.</li>');
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Click on the lesson
+            $('#lesson-list').on('click', 'li', function(){
+                let lessonId = $(this).data('id');
+                $('.lesson-editor').show(); // Show edit form
+
+                $.ajax({
+                    url: '{% url "load_lesson" 0 %}'.replace(0, lessonId),
+                    method: 'GET',
+                    success: function(data){
+                        if(data && data.id){
+                            $('#lesson-id').val(data.id);
+                            $('#lesson-number').val(data.lesson_number); 
+                            $('#title').val(data.title);
+                            $('#content').val(data.content);
+                            
+                        } else {
+                            console.error("Lesson data is undefined or does not contain an 'id'.");
+                        }
+                    }
+                });
+            });
+
+            // Save lesson
+            $('#update-lesson-form').submit(function(e){
+                e.preventDefault();
+                $.ajax({
+                    url: '{% url "update_lesson" %}',
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function(data){
+                        if(data.success){
+                            console.log('Lesson updated successfully!');
+                            
+                            // update text of  <li> element in lesson list
+                            let lessonId = $('#lesson-id').val();
+                            let updatedTitle = $('#title').val();
+                            let updatedLessonNumber = $('#lesson-number').val();
+                            let updatedContent = $('#content').val();
+                            $('.lesson-editor').hide();
+                            console.log(2)
+                            $(`#lesson-list li[data-id="${lessonId}"]`).empty();  // Clear previous
+                            $(`#lesson-list li[data-id="${lessonId}"]`).append(`
+                                <span>${updatedLessonNumber}</span> 
+                                <span>${updatedTitle}</span> 
+                                <span>${updatedContent}</span>    
+                            `);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Failed to update lesson:", error);
+                    }
+                });
+            });
+
+            // Add lesson
+            $('#add-lesson-form').submit(function(e){
+                e.preventDefault();
+                $.ajax({
+                    url: '{% url "add_lesson" %}',
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function(data){
+                        if(data.success){
+                            console.log('Lesson added successfully!');
+                            $('.course-item[data-id="'+$('#new-lesson-course-id').val()+'"]').click(); // Обновляем список уроков
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Failed to add lesson:", error);
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,36 @@
+*{
+    text-decoration: none;
+    margin: 0;
+    box-sizing: border-box;
+        
+}
+
+.error {
+    display: none;
+    color: red;
+}
+
+.nav{
+    display: flex;
+    position: fixed;
+    width: 100%;
+    top: 0px;
+    height: 50px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #27485D;
+
+}
+
+.nav, nav a, .navigate a {
+    color: white;
+}
+.nav a:hover{
+    color: rgb(34, 226, 233);
+}
+
+.nav .navigate{
+    display: flex;
+    gap: 10px;
+}

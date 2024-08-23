@@ -1,0 +1,55 @@
+
+{% extends "base.html" %}
+{% load static %}
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/login.css' %}">
+    <script src="{% static 'js/validation.js' %}" defer></script>
+    
+{% endblock %}
+
+{% block body %}
+    <form method="post" id="regForm">
+        {% csrf_token %}
+            <header id="form-header">
+                <h1>Registration!</h1>
+            </header>
+            <div class="form-filds">
+                <div class="form-field">
+                    <label>Username</label>
+                    {{ form.username }}
+                    {{ form.username.errors }}
+                    <p class="error name-length-error" name="length">Длина имени должна быть больше 3</p>
+                    <p class="error name-alphabet-error" name="alphabet">Имя может содержать только латиницу и цифры</p>
+                </div>
+                <div class="form-field">
+                    <label>Email</label>
+                    {{ form.email }}
+                    {{ form.email.errors }}
+                    <p class="error mail-alphabet-error" name="incorect-mail">Используйте латынь нижнего регистра</p>
+                    <p class="error incorect-mail" name="incorect-mail">Используйте ukr.net или gmail.com</p>
+                    <p class="error dog-error" name="dog-error">Ожидается использование @</p>
+                </div>
+                <div class="form-field">
+                    <label>Phone</label>
+                    {{ form.phone }}
+                    {{ form.phone.errors }}
+                    <p class="error phone-contryCode-error" name="length">Используйте укр номера</p>
+                    <p class="error user-alphabet-error" name="alphabet">Имя должно содержать только латиницу</p>
+                </div>
+                <div class="form-field">
+                    
+                    <label>Password</label>
+                    {{ form.password }}
+                    {{ form.password.errors }}
+                    <p class="error password-length-error" name="length">Длина должна быть не меньше 8</p>
+                    <p class="error password-digit-error" name="digit">Хотя бы одна цифра</p>
+                    <p class="error password-uppercase-error" name="uppercase">Хотя бы одна заглавная буква</p>
+                    <p class="error password-lowercase-error" name="lowercase">Хотя бы одна прописная буква</p>
+                    <p class="error password-punctuation-error" name="punctuation">Хотя бы один знак пунктуации: .,?\/#!$%\^&\*;:{}=\-_`~()</p>
+                </div>
+            </div>
+            
+           
+        <button type="submit">Regist</button>
+    </form>
+{% endblock %}
